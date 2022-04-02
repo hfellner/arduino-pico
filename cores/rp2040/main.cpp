@@ -32,17 +32,20 @@ mutex_t _pioMutex;
 extern void setup();
 extern void loop();
 
+// Weak symbol for FreeRTOS initialization
+void initFreeRTOS() __attribute__((weak));
 
 // Weak empty variant initialization. May be redefined by variant files.
 void initVariant() __attribute__((weak));
 void initVariant() { }
 
-
 // Optional 2nd core setup and loop
 extern void setup1() __attribute__((weak));
 extern void loop1() __attribute__((weak));
 extern "C" void main1() {
-    rp2040.fifo.registerCore();
+	if (!initFreeRTOS) {
+    	rp2040.fifo.registerCore();
+    }
     if (setup1) {
         setup1();
     }
@@ -53,6 +56,23 @@ extern "C" void main1() {
     }
 }
 
+extern void __loop()
+{
+#ifdef USE_TINYUSB
+	yield();
+#endif
+
+	if (arduino::serialEventRun) {
+		arduino::serialEventRun();
+	}
+	if (arduino::serialEvent1Run) {
+		arduino::serialEvent1Run();
+	}
+	if (arduino::serialEvent2Run) {
+		arduino::serialEvent2Run();
+	}
+}
+
 extern "C" int main() {
 #if F_CPU != 125000000
     set_sys_clock_khz(F_CPU / 1000, true);
@@ -60,6 +80,10 @@ extern "C" int main() {
 
     mutex_init(&_pioMutex);
     initVariant();
+
+	if (!initFreeRTOS) {
+		rp2040.begin();
+	}
 
 #ifndef NO_USB
 #ifdef USE_TINYUSB
@@ -80,32 +104,26 @@ extern "C" int main() {
 #endif
 
 #ifndef NO_USB
-    if (setup1 || loop1) {
-        rp2040.fifo.begin(2);
-        multicore_launch_core1(main1);
-    } else {
-        rp2040.fifo.begin(1);
-    }
-    rp2040.fifo.registerCore();
+	if (!initFreeRTOS) {
+		if (setup1 || loop1) {
+			rp2040.fifo.begin(2);
+			multicore_launch_core1(main1);
+		} else {
+			rp2040.fifo.begin(1);
+		}
+		rp2040.fifo.registerCore();
+	}
 #endif
 
     setup();
-    while (true) {
-        loop();
-
-#ifdef USE_TINYUSB
-        yield();
-#endif
-
-        if (arduino::serialEventRun) {
-            arduino::serialEventRun();
-        }
-        if (arduino::serialEvent1Run) {
-            arduino::serialEvent1Run();
-        }
-        if (arduino::serialEvent2Run) {
-            arduino::serialEvent2Run();
-        }
+    
+    if (!initFreeRTOS) {
+		while (true) {
+			loop();
+			__loop();
+		}
+    } else {
+		initFreeRTOS();
     }
     return 0;
 }

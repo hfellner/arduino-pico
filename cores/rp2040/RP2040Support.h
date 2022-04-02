@@ -134,16 +134,17 @@ extern "C" void main1();
 
 class RP2040 {
 public:
-    RP2040() {
+    RP2040() { /* noop */ }
+
+    ~RP2040() { /* noop */ }
+
+	void begin() {
         _epoch = 0;
         // Enable SYSTICK exception
         exception_set_exclusive_handler(SYSTICK_EXCEPTION, _SystickHandler);
         systick_hw->csr = 0x7;
         systick_hw->rvr = 0x00FFFFFF;
-    }
-
-    ~RP2040() { /* noop */ }
-
+	}
 
     // Convert from microseconds to PIO clock cycles
     static int usToPIOCycles(int us) {
