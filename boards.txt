@@ -11,6 +11,7 @@ menu.dbgport=Debug Port
 menu.dbglvl=Debug Level
 menu.boot2=Boot Stage 2
 menu.usbstack=USB Stack
+menu.freertos=Use FreeRTOS
 
 # -----------------------------------
 # Raspberry Pi Pico
@@ -138,6 +139,10 @@ rpipico.menu.usbstack.picosdk=Pico SDK
 rpipico.menu.usbstack.picosdk.build.usbstack_flags="-I{runtime.platform.path}/tools/libpico"
 rpipico.menu.usbstack.tinyusb=Adafruit TinyUSB
 rpipico.menu.usbstack.tinyusb.build.usbstack_flags=-DUSE_TINYUSB "-I{runtime.platform.path}/libraries/Adafruit_TinyUSB_Arduino/src/arduino"
+rpipico.menu.freertos.Disabled=Disabled
+rpipico.menu.freertos.Disabled.build.flags.freertos=
+rpipico.menu.freertos.Enabled=Enabled
+rpipico.menu.freertos.Enabled.build.flags.freertos=-DUSE_FREERTOS
 
 # -----------------------------------
 # Raspberry Pi Pico (Picoprobe)

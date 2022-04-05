@@ -23,29 +23,33 @@
 #include <pico/stdlib.h>
 #include <pico/multicore.h>
 
+#ifndef USE_FREERTOS
 RP2040 rp2040;
 
 volatile bool _MFIFO::_otherIdled = false;
+#endif
+
 mutex_t _pioMutex;
 
 
 extern void setup();
 extern void loop();
 
-// Weak symbol for FreeRTOS initialization
-void initFreeRTOS() __attribute__((weak));
+#ifdef USE_FREERTOS
+void initFreeRTOS();
+void startFreeRTOS();
+#endif
 
 // Weak empty variant initialization. May be redefined by variant files.
 void initVariant() __attribute__((weak));
 void initVariant() { }
 
+#ifndef USE_FREERTOS
 // Optional 2nd core setup and loop
 extern void setup1() __attribute__((weak));
 extern void loop1() __attribute__((weak));
 extern "C" void main1() {
-	if (!initFreeRTOS) {
-    	rp2040.fifo.registerCore();
-    }
+	rp2040.fifo.registerCore();
     if (setup1) {
         setup1();
     }
@@ -55,6 +59,7 @@ extern "C" void main1() {
         }
     }
 }
+#endif
 
 extern void __loop()
 {
@@ -81,20 +86,20 @@ extern "C" int main() {
     mutex_init(&_pioMutex);
     initVariant();
 
-	if (!initFreeRTOS) {
-		rp2040.begin();
-	}
+#ifndef USE_FREERTOS
+	initFreeRTOS();
+#endif
 
 #ifndef NO_USB
 #ifdef USE_TINYUSB
-    TinyUSB_Device_Init(0);
+	TinyUSB_Device_Init(0);
 
 #else
-    __USBStart();
+	__USBStart();
 
 #ifndef DISABLE_USB_SERIAL
-    // Enable serial port for reset/upload always
-    Serial.begin(115200);
+	// Enable serial port for reset/upload always
+	Serial.begin(115200);
 #endif
 #endif
 #endif
@@ -103,27 +108,27 @@ extern "C" int main() {
     DEBUG_RP2040_PORT.begin(115200);
 #endif
 
+#ifndef USE_FREERTOS
 #ifndef NO_USB
-	if (!initFreeRTOS) {
-		if (setup1 || loop1) {
-			rp2040.fifo.begin(2);
-			multicore_launch_core1(main1);
-		} else {
-			rp2040.fifo.begin(1);
-		}
-		rp2040.fifo.registerCore();
+	if (setup1 || loop1) {
+		rp2040.fifo.begin(2);
+		multicore_launch_core1(main1);
+	} else {
+		rp2040.fifo.begin(1);
 	}
+	rp2040.fifo.registerCore();
+#endif
 #endif
 
     setup();
     
-    if (!initFreeRTOS) {
-		while (true) {
-			loop();
-			__loop();
-		}
-    } else {
-		initFreeRTOS();
-    }
-    return 0;
+#ifndef USE_FREERTOS
+	while (true) {
+		loop();
+		__loop();
+	}
+#else
+	startFreeRTOS();
+#endif
+	return 0;
 }
