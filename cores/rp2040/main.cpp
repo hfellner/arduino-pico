@@ -86,7 +86,7 @@ extern "C" int main() {
     mutex_init(&_pioMutex);
     initVariant();
 
-#ifndef USE_FREERTOS
+#ifdef USE_FREERTOS
 	initFreeRTOS();
 #endif
 
